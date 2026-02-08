@@ -1,76 +1,164 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bluetooth Connection Demo</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f0f0f0;
-        }
-        .container {
-            text-align: center;
-            padding: 20px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        #status {
-            margin-top: 20px;
-            font-weight: bold;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <title>TV Sound to Phone</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#1e3a8a" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <meta name="description" content="Turn your phone into a private TV listener using Web Bluetooth, Web Audio, and PWA." />
 </head>
 <body>
-    <div class="container">
-        <h1>Bluetooth Demo</h1>
-        <p>Click to connect to a Bluetooth device (BLE only).</p>
-        <button id="connectBtn">Connect to Device</button>
-        <div id="status">Status: Not connected</div>
-    </div>
+  <header class="app-header">
+    <h1 class="hero-title" aria-label="TV Sound to Phone">TV Sound to Phone</h1>
+    <p class="hero-subtitle">
+      Quiet late-night TV for dad. Phone acts as a **receiver** for demo audio paths (BLE, mic, and test tone).
+    </p>
+    <noscript>
+      <p class="warning">This app needs JavaScript enabled.</p>
+    </noscript>
+  </header>
 
-    <script>
-        const connectBtn = document.getElementById('connectBtn');
-        const status = document.getElementById('status');
+  <main class="app-main" role="main">
+    <section class="status-card" aria-live="polite">
+      <div class="status-row">
+        <span class="status-label">Connection</span>
+        <span id="connection-status" class="status-pill status-disconnected">Disconnected</span>
+      </div>
+      <div class="status-row">
+        <span class="status-label">Audio</span>
+        <span id="audio-status" class="status-pill status-idle">Idle</span>
+      </div>
+      <div class="status-row">
+        <span class="status-label">Signal</span>
+        <progress id="signal-strength" max="100" value="0" aria-label="Bluetooth signal strength"></progress>
+      </div>
+      <div class="status-row">
+        <span class="status-label">Battery</span>
+        <span id="battery-indicator">--%</span>
+      </div>
+      <div class="status-row small">
+        <span class="status-label">Mode</span>
+        <span id="mode-indicator">Auto (BT → Mic)</span>
+      </div>
+    </section>
 
-        connectBtn.addEventListener('click', async () => {
-            if (!navigator.bluetooth) {
-                status.textContent = 'Status: Web Bluetooth API not supported in this browser.';
-                return;
-            }
+    <section class="controls" aria-label="Main controls">
+      <button id="btn-find-tv"
+              class="primary-btn"
+              aria-label="Find my TV"
+              aria-pressed="false">
+        🔍 1. FIND MY TV
+      </button>
 
-            try {
-                status.textContent = 'Status: Requesting device...';
-                const device = await navigator.bluetooth.requestDevice({
-                    acceptAllDevices: true // For demo; normally specify filters like { filters: [{ services: ['battery_service'] }] }
-                });
+      <button id="btn-hear-on-phone"
+              class="primary-btn disabled"
+              aria-label="Hear TV audio on phone"
+              aria-pressed="false"
+              disabled>
+        🔊 2. HEAR ON PHONE
+      </button>
 
-                status.textContent = `Status: Connected to ${device.name}`;
-                console.log('Device:', device);
-                // You could connect to GATT server here: await device.gatt.connect();
-                // But no audio streaming possible.
-            } catch (error) {
-                status.textContent = `Status: Error - ${error.message}`;
-            }
-        });
-    </script>
+      <button id="btn-mute"
+              class="secondary-btn"
+              aria-label="Mute or unmute audio">
+        🔇 MUTE
+      </button>
+
+      <div class="volume-row" aria-label="Volume control">
+        <label for="volume-slider">Volume</label>
+        <input id="volume-slider"
+               type="range"
+               min="0"
+               max="100"
+               value="80"
+               step="1"
+               aria-valuemin="0"
+               aria-valuemax="100"
+               aria-valuenow="80"
+               aria-label="Volume slider" />
+        <span id="volume-value">80%</span>
+      </div>
+
+      <div class="progress-row">
+        <label for="buffer-progress">Buffer</label>
+        <progress id="buffer-progress" max="100" value="0"></progress>
+      </div>
+    </section>
+
+    <section class="info-card" aria-label="Instructions">
+      <h2>How to use</h2>
+      <ol>
+        <li>Turn on Bluetooth on your phone and TV (make TV discoverable in Settings → Bluetooth).</li>
+        <li>Tap “FIND MY TV” then choose your TV from the Chrome device picker.</li>
+        <li>Tap “HEAR ON PHONE” to start demo audio (BLE packets if available, otherwise microphone or test tone).</li>
+        <li>Adjust volume, mute, and keep the page open; screen lock can still keep audio running.</li>
+      </ol>
+      <p class="disclaimer">
+        Note: Browsers currently support only Bluetooth Low Energy GATT, not full A2DP audio sink, so real TV audio over Bluetooth needs native support or custom hardware. This app demonstrates the full pipeline and uses realistic fallbacks.
+      </p>
+      <p class="https-warning" id="https-warning" hidden>
+        You are not on HTTPS. For full Bluetooth support, run on HTTPS or localhost:8000.
+      </p>
+      <p class="browser-warning" id="browser-warning" hidden>
+        Web Bluetooth is only available on Chromium-based browsers like Chrome or Edge on supported platforms.
+      </p>
+    </section>
+
+    <section class="tv-list-card" aria-label="Supported TVs">
+      <h2>Supported TV models (targeted)</h2>
+      <table class="tv-table">
+        <thead>
+          <tr>
+            <th>Brand</th>
+            <th>Models</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Samsung</td>
+            <td>QN90A, QN85A, Frame 2022</td>
+            <td>Ensure Bluetooth audio / external device mode is enabled.</td>
+          </tr>
+          <tr>
+            <td>LG</td>
+            <td>OLED C1/G1, NanoCell</td>
+            <td>Use Sound → Bluetooth → Pair new device.</td>
+          </tr>
+          <tr>
+            <td>Sony</td>
+            <td>Bravia XR A80J, X90J</td>
+            <td>Android TV settings → Remote & Accessories → Bluetooth settings.</td>
+          </tr>
+          <tr>
+            <td>Android TV</td>
+            <td>NVIDIA Shield, Google TV</td>
+            <td>Pair using system Bluetooth menu.</td>
+          </tr>
+          <tr>
+            <td>Amazon / Roku</td>
+            <td>Fire TV Stick 4K, Roku Ultra</td>
+            <td>Enable Bluetooth audio / speaker in device settings.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <p>
+      Built for 11th std portfolio & Fiverr clients – shows Web Bluetooth, Web Audio, and PWA in one project.
+    </p>
+  </footer>
+
+  <script type="module">
+    import { initApp } from './js/app.js';
+    window.addEventListener('DOMContentLoaded', () => {
+      initApp();
+    });
+  </script>
 </body>
 </html>

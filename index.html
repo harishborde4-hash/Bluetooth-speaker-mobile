@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bluetooth Connection Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        .container {
+            text-align: center;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #status {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Bluetooth Demo</h1>
+        <p>Click to connect to a Bluetooth device (BLE only).</p>
+        <button id="connectBtn">Connect to Device</button>
+        <div id="status">Status: Not connected</div>
+    </div>
+
+    <script>
+        const connectBtn = document.getElementById('connectBtn');
+        const status = document.getElementById('status');
+
+        connectBtn.addEventListener('click', async () => {
+            if (!navigator.bluetooth) {
+                status.textContent = 'Status: Web Bluetooth API not supported in this browser.';
+                return;
+            }
+
+            try {
+                status.textContent = 'Status: Requesting device...';
+                const device = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true // For demo; normally specify filters like { filters: [{ services: ['battery_service'] }] }
+                });
+
+                status.textContent = `Status: Connected to ${device.name}`;
+                console.log('Device:', device);
+                // You could connect to GATT server here: await device.gatt.connect();
+                // But no audio streaming possible.
+            } catch (error) {
+                status.textContent = `Status: Error - ${error.message}`;
+            }
+        });
+    </script>
+</body>
+</html>
